@@ -6,7 +6,8 @@
     "host": "localhost",
     "port": 5432,
     "database": "gea",
-    "max_connections": 5
+    "max_connections": 5,
+    "memcached": "127.0.0.1:11211"
   },
   "prod": {
     "driver": "pg",
@@ -15,6 +16,7 @@
     "host": "PRODUCTION HOST HERE",
     "port": 5432,
     "database": "PRODUCTION DATABASE HERE",
-    "max_connections": null
+    "max_connections": null,
+    "memcached": "PRODUCTION CACHE SERVER HERE"
   }
 }

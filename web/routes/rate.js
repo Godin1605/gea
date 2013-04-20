@@ -1,5 +1,6 @@
 // requirements
 var pg = require('pg'),
+    Memcached = require('Memcached'),
     async = require('async'),
     fs = require('fs'),
     path = require('path'),
@@ -28,6 +29,9 @@ pg.defaults.host = config.host;
 pg.defaults.port = config.port;
 pg.defaults.database = config.database;
 pg.defaults.poolSize = config.max_connections;
+
+// New Memcached instance
+var mem = new Memcached(config.memcached);
 
 // routes
 module.exports = {
@@ -179,20 +183,35 @@ module.exports = {
     vals.push(limit);
     vals.push(offset);
     queryName += '_' + order;
+    var keyName = queryName + '_' + vals.join('_');
 
-    // execute query
-    pg.connect(function (err, client, done) {
-      client.query({
-        text: query,
-        name: queryName,
-        values: vals
-      }, function (err, data) {
-        if (err) {
-          res.json(500, err);
-          return done();
-        }
-        res.json(data.rows);
-        done();
+    // check cache
+    mem.get(keyName, function (e, r) {
+      if (e) {
+        res.json(500, e);
+        return;
+      }
+      if (r) {
+        res.json(r);
+        return;
+      }
+      // execute query
+      pg.connect(function (err, client, done) {
+        client.query({
+          text: query,
+          name: queryName,
+          values: vals
+        }, function (err, data) {
+          if (err) {
+            res.json(500, err);
+            return done();
+          }
+          // Cache result for one hour
+          mem.set(keyName, data.rows, 60 * 60, function (e, r) {
+            res.json(data.rows);
+            done();
+          });
+        });
       });
     });
   }
